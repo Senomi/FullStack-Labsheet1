@@ -35,25 +35,25 @@ function describeWeatherCode(code) {
 if (code===0){
     return "Clear sky";
 }
-else if (code>1 && code <3){
+else if (code>=1 && code <=3){
     return "Partly cloudy";
 }
 else if (code===45 || code===48){
     return "Fog";
 }
-else if (code>51 && code <57){
+else if (code>=51 && code <=57){
     return "Drizzle";
 }
-else if (code>61 && code <67){
+else if (code>=61 && code <=67){
     return "Rain";
 }
-else if (code>71 && code <77){
+else if (code>=71 && code <=77){
     return "Snow";
 }
-else if (code>80 && code <82){
+else if (code>=80 && code <=82){
     return "Rain showers";
 }
-else if (code>95 && code <99){
+else if (code>=95 && code <=99){
     return "Thunderstorm";
 }
 else{
@@ -76,10 +76,13 @@ else{
 //
 function setStatus(message, isError = false) {
 //   YOUR CODE HERE
+//1
 statusMsg.textContent = message;
+//2
 if (isError){
     statusMsg.classList.add("error");
 }
+//3
 else{
     statusMsg.classList.remove("error");
 }
@@ -178,17 +181,18 @@ return res.json();
 function renderCurrentWeather(place, weatherData) {
 //   YOUR CODE HERE
 //1
-weatherData=weatherData.current_weather;
+const current = weatherData.current_weather;
 //2
 cityNameEl.textContent=`${place.name},${place.country}`;
-tempEl.textContent=`${weatherData.tempEl}`;
-}
-
 //3
+tempEl.textContent=`${current.temperature} °C`;
 //4
+windEl.textContent=`${current.windspeed} km/h`;
 //5
-
+conditionEl.textContent=describeWeatherCode(current.weathercode);
 //6
+currentCard.classList.remove("hidden");
+}
 
 // ============================================================
 // TASK 4 — CREATE THE FORECAST TABLE
@@ -231,9 +235,29 @@ tempEl.textContent=`${weatherData.tempEl}`;
 //   daily.temperature_2m_min
 //   daily.precipitation_sum
 //
-// function renderForecastTable(daily) {
+function renderForecastTable(daily) {
 //   YOUR CODE HERE
-// }
+//1
+forecastBody.innerHTML="";
+//2
+for(let i=0; i<daily.time.length;i++){
+    //3
+    const row = document.createElement("tr");
+    row.innerHTML=`
+    <td>${daily.time[i]}</td>
+    <td>${describeWeatherCode(daily.weathercode[i])}</td>
+    <td>${daily.temperature_2m_max[i]} °C</td>
+    <td>${daily.temperature_2m_min[i]} °C</td>
+    <td>${daily.precipitation_sum[i]} mm</td>
+    `;
+
+    if(daily.precipitation_sum[i]>0){
+        row.classList.add("rainy");
+    }
+    //5
+    forecastBody.appendChild(row);
+}
+}
 
 // ============================================================
 // TASK 5 — HANDLE SEARCH
@@ -276,9 +300,48 @@ tempEl.textContent=`${weatherData.tempEl}`;
 //     setStatus().
 //
 //
-// async function handleSearch() {
+async function handleSearch() {
 //   YOUR CODE HERE
-// }
+//1
+const city = cityInput.value.trim();
+//3
+if (city === ""){
+    setStatus("Please type a city name.",true);
+    return;
+}
+//4
+currentCard.classList.add("hidden");
+
+//5
+forecastBody.innerHTML="";
+
+//6
+setStatus("Loading...");
+
+try{
+    //7
+    const place = await geocodeCity(city);
+
+    //8
+    const weatherData = await fetchForecast(
+        place.latitude,
+        place.longitude
+    );
+
+    //9
+    renderCurrentWeather(place,weatherData);
+
+    //10
+    renderForecastTable(weatherData.daily);
+
+    //11
+    setStatus("");
+}
+catch(error){
+    //13
+    setStatus(error.message,true);
+}
+}
 
 // ============================================================
 // TASK 6 — SEARCH BUTTON EVENT
@@ -291,7 +354,7 @@ tempEl.textContent=`${weatherData.tempEl}`;
 //
 // Hint:
 //   addEventListener("click", ...)
-
+searchBtn.addEventListener("click",handleSearch);
 // ============================================================
 // TASK 7 — ENTER KEY SUPPORT
 // ============================================================
@@ -304,6 +367,12 @@ tempEl.textContent=`${weatherData.tempEl}`;
 //
 // Hint:
 //   e.key === "Enter"
+cityInput.addEventListener("keydown",function(e){
+    if(e.key === "Enter"){
+        handleSearch();
+    }
+}
+);
 
 // ============================================================
 // STRETCH GOAL — HIGHLIGHT RAINY DAYS
